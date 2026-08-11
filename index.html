@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Yamazumi Studio & AI Video Analytics - Google Philo Server Line</title>
+  <meta name="description" content="Plataforma de análisis Yamazumi con Detección Automática de Tareas, Kaizen Proposals por IA y Action Tracker de Técnicos.">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f9ff',
+              500: '#06b6d4',
+              600: '#0284c7',
+              900: '#0c4a6e',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Estilos Personalizados -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
+
+  <!-- Header Superior Industrial Compacto -->
+  <header class="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 shadow-xl no-print">
+    <div class="max-w-[1700px] mx-auto px-4 py-2.5 flex flex-wrap items-center justify-between gap-3">
+      
+      <!-- Brand Logo & Title -->
+      <div class="flex items-center space-x-2.5">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 via-indigo-600 to-emerald-500 flex items-center justify-center shadow-md">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-sm font-black tracking-tight text-white flex items-center gap-1.5">
+            Yamazumi & AI Video Analytics
+            <span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Kaizen Studio</span>
+          </h1>
+          <p class="text-[10px] text-slate-400">Línea de Ensamblado de Almacenamiento Masivo (Rack 2U)</p>
+        </div>
+      </div>
+
+      <!-- Selector de Productos / Plantilla -->
+      <div class="flex items-center space-x-2">
+        <label for="preset-select" class="text-xs font-semibold text-slate-400 hidden sm:block">Línea:</label>
+        <select id="preset-select" onchange="app.loadPreset(this.value)"
+                class="bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-indigo-500 outline-none shadow-inner">
+          <option value="google_philo">☁️ Google Philo Storage Server (2U)</option>
+          <option value="mountain_bike">🚲 Bicicleta de Montaña</option>
+          <option value="pc_server">🖥️ Servidor Genérico Rack 2U</option>
+        </select>
+      </div>
+
+      <!-- Toolbar de Acciones Principales -->
+      <div class="flex items-center space-x-2">
+        <button onclick="app.resetDefaultData()"
+                class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all flex items-center space-x-1 shadow"
+                title="Restablecer los datos de prueba iniciales de Philo (5 estaciones y 22 tareas)">
+          <span>🔄 Restablecer Datos</span>
+        </button>
+
+        <button onclick="app.openImportModal()"
+                class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all flex items-center space-x-1 shadow">
+          <svg class="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+          <span>Importar</span>
+        </button>
+
+        <div class="relative group">
+          <button class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all flex items-center space-x-1 shadow">
+            <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            <span>Exportar</span>
+          </button>
+          <div class="hidden group-hover:block absolute right-0 top-full pt-1 z-50 w-36">
+            <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-xl py-1 text-xs">
+              <a href="#" onclick="app.exportJSON(); return false;" class="block px-4 py-2 text-slate-300 hover:bg-slate-700 hover:text-white">Exportar JSON</a>
+              <a href="#" onclick="app.exportCSV(); return false;" class="block px-4 py-2 text-slate-300 hover:bg-slate-700 hover:text-white">Exportar CSV</a>
+            </div>
+          </div>
+        </div>
+
+        <button onclick="app.triggerPrint()"
+                class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white shadow-md transition-all flex items-center space-x-1">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+          <span class="hidden sm:inline">Imprimir</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Contenido Principal con Layout de Alta Densidad -->
+  <main class="flex-1 max-w-[1700px] w-full mx-auto px-4 py-4 space-y-4">
+
+    <!-- Banner de Tarjetas KPI -->
+    <section class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5 no-print">
+      
+      <div class="glass-card p-2.5 rounded-xl flex flex-col justify-between hover:border-slate-600 transition-all cursor-pointer"
+           onclick="app.openTaktModal()" title="Hacer clic para editar Takt Time">
+        <span class="text-[9px] font-semibold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+          <span>Takt Time</span>
+          <span class="text-rose-400">⏱️</span>
+        </span>
+        <div class="mt-1">
+          <span id="kpi-takt-time" class="text-lg font-black text-white">180s</span>
+          <p class="text-[8px] text-slate-400">Meta / unidad</p>
+        </div>
+      </div>
+
+      <div id="kpi-bottleneck-card" class="glass-card p-2.5 rounded-xl flex flex-col justify-between hover:border-slate-600 transition-all">
+        <span class="text-[9px] font-semibold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+          <span>Cuello Botella</span>
+          <span class="text-amber-400 animate-pulse">🔥</span>
+        </span>
+        <div class="mt-1">
+          <span id="kpi-bottleneck" class="text-lg font-black text-amber-300">0s</span>
+          <p id="kpi-bottleneck-name" class="text-[8px] text-slate-300 font-bold truncate">Estación</p>
+        </div>
+      </div>
+
+      <div class="glass-card p-2.5 rounded-xl flex flex-col justify-between hover:border-slate-600 transition-all">
+        <span class="text-[9px] font-semibold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+          <span>Eficiencia</span>
+          <span class="text-emerald-400">⚖️</span>
+        </span>
+        <div class="mt-1">
+          <span id="kpi-efficiency" class="text-lg font-black text-emerald-400">0%</span>
+          <p class="text-[8px] text-slate-400">Balanceo Lean</p>
+        </div>
+      </div>
+
+      <div class="glass-card p-2.5 rounded-xl flex flex-col justify-between hover:border-slate-600 transition-all">
+        <span class="text-[9px] font-semibold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+          <span>Trabajo Total</span>
+          <span class="text-indigo-400">🧩</span>
+        </span>
+        <div class="mt-1">
+          <span id="kpi-work-content" class="text-lg font-black text-indigo-300">0s</span>
+          <p class="text-[8px] text-slate-400">Suma tareas</p>
+        </div>
+      </div>
+
+      <div class="glass-card p-2.5 rounded-xl flex flex-col justify-between hover:border-slate-600 transition-all">
+        <span class="text-[9px] font-semibold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+          <span>Estaciones</span>
+          <span class="text-cyan-400">👷</span>
+        </span>
+        <div class="mt-1">
+          <span id="kpi-stations-count" class="text-lg font-black text-slate-100">5</span>
+          <p class="text-[8px] text-slate-400">Puestos activos</p>
+        </div>
+      </div>
+
+      <div class="glass-card p-2.5 rounded-xl flex flex-col justify-between hover:border-slate-600 transition-all">
+        <span class="text-[9px] font-semibold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+          <span>Desperdicio</span>
+          <span class="text-rose-400">🗑️</span>
+        </span>
+        <div class="mt-1">
+          <span id="kpi-muda-percent" class="text-sm font-extrabold text-rose-400">0s (0%)</span>
+          <p class="text-[8px] text-slate-400">Oportunidad Kaizen</p>
+        </div>
+      </div>
+
+      <div class="glass-card p-2.5 rounded-xl flex flex-col justify-between border border-indigo-500/40 bg-indigo-500/10">
+        <span class="text-[9px] font-semibold text-indigo-300 uppercase tracking-wider flex items-center justify-between">
+          <span>Hallazgos</span>
+          <span>🐞</span>
+        </span>
+        <div class="mt-1">
+          <span id="kpi-findings-count" class="text-lg font-black text-indigo-300">0</span>
+          <p class="text-[8px] text-slate-300">Registrados en video</p>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Navegación de Pestañas Principales + Botones de Acción Kaizen & Action Tracker (Alineados a la Derecha) -->
+    <nav class="flex flex-wrap items-center justify-between border-b border-slate-800 pb-1.5 no-print gap-2">
+      
+      <!-- Pestañas de la Izquierda -->
+      <div class="flex items-center space-x-2">
+        <button id="tab-btn-dashboard" onclick="app.switchTab('dashboard')"
+                class="px-3 py-1 text-xs font-bold rounded-lg bg-indigo-600 text-white shadow-md flex items-center space-x-1 transition-all">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+          <span>Dashboard Yamazumi & Video Analytics</span>
+        </button>
+
+        <button id="tab-btn-table" onclick="app.switchTab('table')"
+                class="px-3 py-1 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 flex items-center space-x-1 transition-all">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+          <span>Tabla de Tareas</span>
+        </button>
+
+        <button id="tab-btn-analytics" onclick="app.switchTab('analytics')"
+                class="px-3 py-1 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 flex items-center space-x-1 transition-all">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          <span>Análisis Kaizen</span>
+        </button>
+      </div>
+
+      <!-- BOTONES DE ACCIÓN PRINCIPAL ALINEADOS A LA DERECHA (Propuestas Kaizen por IA & Action Tracker) -->
+      <div class="ml-auto flex items-center space-x-2">
+        <button onclick="app.openKaizenProposalsModal()"
+                class="px-3 py-1.5 text-xs font-black rounded-lg bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 shadow-md shadow-amber-500/20 transition-all flex items-center space-x-1.5 hover:scale-105 active:scale-95">
+          <span>✨ Propuestas Kaizen (IA)</span>
+        </button>
+
+        <button onclick="app.openActionTrackerModal()"
+                class="px-3 py-1.5 text-xs font-bold rounded-lg bg-gradient-to-r from-cyan-600 via-teal-600 to-emerald-600 hover:from-cyan-500 hover:to-emerald-500 text-white shadow-md shadow-emerald-600/20 transition-all flex items-center space-x-1.5 hover:scale-105 active:scale-95">
+          <span>📋 Action Tracker (Técnicos)</span>
+        </button>
+      </div>
+
+    </nav>
+
+    <!-- DASHBOARD PRINCIPAL: Estructura Flexbox / Grid con Proporciones Compactas 70% / 30% -->
+    <section id="view-dashboard" class="flex flex-col lg:flex-row gap-4 w-full">
+      
+      <!-- Columna Izquierda: Gráfico Yamazumi (70% del ancho con min-h-[440px]) -->
+      <div class="w-full lg:w-[68%] min-w-0 flex flex-col space-y-2">
+        <div class="flex items-center justify-between">
+          <h2 class="text-xs font-bold text-slate-200 flex items-center space-x-2">
+            <span>📊 Balanceo de Línea Philo (Gráfico Yamazumi - Columnas Compactas max-w-[160px])</span>
+          </h2>
+          <span class="text-[10px] text-slate-400">💡 haz clic en cualquier tarea para saltar a su timestamp en el video</span>
+        </div>
+
+        <div id="yamazumi-chart-container" class="w-full min-w-0 overflow-x-auto min-h-[440px]"></div>
+      </div>
+
+      <!-- Columna Derecha: Video Analytics y Formulario (30% Máximo de Ancho) -->
+      <div class="w-full lg:w-[32%] space-y-3 flex-shrink-0">
+        
+        <!-- Reproductor de Video Compacto con Botón de Galería -->
+        <div class="glass-card p-3 rounded-2xl space-y-2.5">
+          
+          <div class="flex items-center justify-between border-b border-slate-800 pb-1.5">
+            <div class="overflow-hidden pr-1">
+              <h3 id="video-station-title" class="text-xs font-bold text-white truncate">
+                ST-01: PCB & Backplane Assembly
+              </h3>
+              <p id="video-station-operator" class="text-[9px] text-slate-400 truncate">Op: Marcus Vance</p>
+            </div>
+            
+            <span id="video-status-badge" class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-800 text-slate-400 border border-slate-700 flex-shrink-0">
+              ⏸️ Pausado
+            </span>
+          </div>
+
+          <!-- Input File Oculto Permisivo -->
+          <input type="file" id="local-video-input" accept="video/*, .mov, .mp4, .m4v, .webm, .mkv"
+                 onchange="LowbandVideoPlayer.handleLocalVideoUpload(this.files[0])"
+                 class="hidden">
+
+          <!-- Botón Compacto para Cargar Video de Galería -->
+          <div class="flex items-center justify-between gap-2 bg-slate-900/80 p-1.5 rounded-lg border border-slate-800">
+            <button onclick="document.getElementById('local-video-input').click()"
+                    class="px-2.5 py-1 text-[10px] font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-md shadow transition-all flex items-center space-x-1 flex-shrink-0">
+              <span>📁 Subir Video de Galería</span>
+            </button>
+            <span id="video-file-name" class="text-[9px] font-mono text-slate-400 truncate flex-1 text-right">
+              Sin video cargado
+            </span>
+          </div>
+
+          <!-- Reproductor de Video Adaptable (16:9) -->
+          <div class="relative w-full bg-slate-950 aspect-video rounded-lg overflow-hidden border border-slate-800 shadow-xl flex items-center justify-center group">
+            <video id="lowband-video-element" class="w-full h-full object-cover" controls playsinline preload="metadata"></video>
+            
+            <!-- Visor del Reloj en Milisegundos -->
+            <div class="absolute bottom-1.5 right-1.5 bg-slate-900/90 backdrop-blur-xs border border-slate-700 rounded px-1.5 py-0.5 shadow flex items-center space-x-1">
+              <span class="text-[8px] uppercase font-bold text-slate-400">MS:</span>
+              <span id="video-precision-clock" class="text-[10px] font-mono font-bold text-emerald-400">00:00:00.000</span>
+            </div>
+
+            <!-- Tarea Actual Badge -->
+            <div id="video-current-task-badge" class="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-900/80 text-indigo-300 border border-slate-700 backdrop-blur-xs truncate max-w-[160px]">
+              🎯 Ninguna tarea
+            </div>
+          </div>
+
+          <!-- Controles Rápidos -->
+          <div class="flex items-center justify-between text-[10px] pt-1">
+            <div class="flex items-center space-x-1">
+              <button onclick="LowbandVideoPlayer.stepFrame(-0.1)" class="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-300" title="Retroceder 0.1s">
+                ◀ 0.1s
+              </button>
+              <button onclick="LowbandVideoPlayer.togglePlayPause()" class="px-2 py-0.5 bg-indigo-600 hover:bg-indigo-500 rounded font-bold text-white shadow">
+                ⏯️
+              </button>
+              <button onclick="LowbandVideoPlayer.stepFrame(0.1)" class="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-300" title="Avanzar 0.1s">
+                0.1s ▶
+              </button>
+            </div>
+
+            <div class="flex items-center space-x-1">
+              <select id="video-speed-select" onchange="LowbandVideoPlayer.setPlaybackSpeed(this.value)"
+                      class="bg-slate-800 border border-slate-700 text-[9px] text-slate-200 rounded px-1 py-0.5 outline-none">
+                <option value="0.25">0.25x</option>
+                <option value="0.5">0.5x</option>
+                <option value="1.0" selected>1.0x</option>
+                <option value="1.5">1.5x</option>
+                <option value="2.0">2.0x</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Formulario Express de Defectos -->
+        <div class="glass-card p-3 rounded-2xl space-y-2">
+          <div class="flex items-center justify-between">
+            <h4 class="text-xs font-bold text-slate-200">🐞 Registrar Defecto / Tarea</h4>
+            <button onclick="LowbandVideoPlayer.captureCurrentTimestamp()"
+                    class="px-1.5 py-0.5 text-[9px] font-bold bg-slate-800 hover:bg-slate-700 text-indigo-300 rounded border border-slate-700"
+                    title="Capturar timestamp actual">
+              ⏱️ Timestamp
+            </button>
+          </div>
+
+          <div class="grid grid-cols-2 gap-1.5">
+            <div>
+              <label class="block text-[9px] font-semibold text-slate-400 mb-0.5">Tipo Defecto</label>
+              <select id="finding-category-select" class="w-full bg-slate-800 border border-slate-700 text-[10px] text-white rounded px-1.5 py-0.5 outline-none">
+                <option value="Cuello de Botella">🔥 Cuello Botella</option>
+                <option value="Defecto de Calidad">🐞 Defecto Calidad</option>
+                <option value="Espera">⏳ Espera</option>
+                <option value="Retrabajo">🔄 Retrabajo</option>
+                <option value="Movimiento Innecesario">🚶 Mov. Innecesario</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-[9px] font-semibold text-slate-400 mb-0.5">Categoría Yamazumi</label>
+              <select id="finding-yamazumi-cat-select" class="w-full bg-slate-800 border border-slate-700 text-[10px] text-white rounded px-1.5 py-0.5 outline-none">
+                <option value="VA">🟩 Valor Agregado (VA)</option>
+                <option value="NVA">🟨 No Valor Agregado (NVA)</option>
+                <option value="Muda" selected>🟥 Desperdicio (Muda)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-1.5">
+            <div>
+              <label class="block text-[9px] font-semibold text-slate-400 mb-0.5">Severidad</label>
+              <select id="finding-severity-select" class="w-full bg-slate-800 border border-slate-700 text-[10px] text-white rounded px-1.5 py-0.5 outline-none">
+                <option value="Alta">🔴 Alta</option>
+                <option value="Media" selected>🟡 Media</option>
+                <option value="Baja">🟢 Baja</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-[9px] font-semibold text-slate-400 mb-0.5">Duración (seg)</label>
+              <input type="number" id="finding-duration-input" min="1" value="15"
+                     class="w-full bg-slate-800 border border-slate-700 text-[10px] text-white rounded px-1.5 py-0.5 outline-none">
+            </div>
+          </div>
+
+          <div class="flex items-center space-x-1.5 pt-0.5">
+            <input type="text" id="finding-desc-input" placeholder="Nota del defecto..."
+                   class="flex-1 bg-slate-800 border border-slate-700 text-[10px] text-white rounded px-2 py-1 outline-none focus:border-indigo-500">
+            <button onclick="LowbandVideoPlayer.addFindingFromForm()"
+                    class="px-2.5 py-1 text-[10px] font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-md shadow transition-all flex items-center space-x-0.5">
+              <span>+ Agregar</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Tabla Resumen de Hallazgos -->
+        <div class="glass-card p-3 rounded-2xl space-y-1.5">
+          <h4 class="text-xs font-bold text-slate-200">📋 Hallazgos & Timestamps</h4>
+          <div class="overflow-y-auto max-h-36 rounded-lg border border-slate-800 bg-slate-950/40">
+            <table class="w-full text-left">
+              <thead class="bg-slate-900 text-slate-400 text-[9px] uppercase font-semibold">
+                <tr>
+                  <th class="px-2 py-1">Moment</th>
+                  <th class="px-2 py-1">Tipo</th>
+                  <th class="px-2 py-1">Sev</th>
+                  <th class="px-2 py-1">Nota</th>
+                  <th class="px-2 py-1 text-right">✕</th>
+                </tr>
+              </thead>
+              <tbody id="findings-log-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- VISTA 2: Tabla de Datos Tabular -->
+    <section id="view-table" class="hidden glass-card rounded-2xl p-6 space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-bold text-slate-200">Listado Completo de Tareas de Ensamblado Philo</h2>
+        <button onclick="app.openTaskModal()" class="px-3 py-1.5 text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-all flex items-center space-x-1">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <span>Agregar Tarea</span>
+        </button>
+      </div>
+
+      <div class="overflow-x-auto rounded-xl border border-slate-800">
+        <table class="w-full text-left">
+          <thead class="bg-slate-900 text-slate-400 text-xs uppercase tracking-wider font-semibold border-b border-slate-800">
+            <tr>
+              <th class="px-4 py-3">#</th>
+              <th class="px-4 py-3">Estación Philo</th>
+              <th class="px-4 py-3">Operador</th>
+              <th class="px-4 py-3">Nombre de Tarea</th>
+              <th class="px-4 py-3">Duración</th>
+              <th class="px-4 py-3">Categoría Lean</th>
+              <th class="px-4 py-3">Notas / Poka-Yoke</th>
+              <th class="px-4 py-3 text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="table-view-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- VISTA 3: Reporte y Análisis Lean -->
+    <section id="view-analytics" class="hidden">
+      <div id="analytics-view-container"></div>
+    </section>
+
+  </main>
+
+  <!-- MODAL: PROPUESTAS KAIZEN (GENERADOR AUTOMÁTICO POR IA) -->
+  <div id="kaizen-proposals-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
+    <div class="bg-slate-900 border border-amber-500/50 rounded-2xl max-w-3xl w-full p-6 shadow-[0_0_30px_rgba(245,158,11,0.2)] space-y-4 my-8">
+      
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center space-x-2">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 via-amber-600 to-yellow-500 flex items-center justify-center text-slate-950 text-xl font-bold shadow-md shadow-amber-500/30">
+            ✨
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              Propuestas Kaizen (Generador Automático por IA)
+              <span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">AI Engine</span>
+            </h3>
+            <p class="text-xs text-slate-400">Escaneo inteligente de desperdicios (MUDA / NVA) en estaciones de trabajo</p>
+          </div>
+        </div>
+        <button onclick="app.closeModal('kaizen-proposals-modal')" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+
+      <!-- Sección Destacada con Botón Principal para Generar por IA -->
+      <div class="p-4 bg-gradient-to-r from-slate-950 via-slate-900 to-amber-950/40 rounded-xl border border-amber-500/30 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-inner">
+        <div class="space-y-1 text-center sm:text-left">
+          <h4 class="text-xs font-black text-amber-300 flex items-center gap-1.5 justify-center sm:justify-start">
+            <span>🤖 Motor de Recomendaciones Kaizen por IA</span>
+          </h4>
+          <p class="text-[11px] text-slate-300 leading-tight">
+            Analiza automáticamente las tareas clasificadas como desperdicio (MUDA) y no valor agregado (NVA), priorizando la estación <strong class="text-amber-400">Cuello de Botella</strong>.
+          </p>
+        </div>
+
+        <button onclick="app.generateAiKaizenProposals()"
+                class="px-4 py-2.5 text-xs font-black rounded-xl bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 shadow-lg shadow-amber-500/30 transition-all flex items-center space-x-2 flex-shrink-0 hover:scale-105 active:scale-95">
+          <span>✨ Generar Propuestas Kaizen con IA</span>
+        </button>
+      </div>
+
+      <!-- Tabla de Resultados Generados por IA -->
+      <div class="space-y-2">
+        <div class="flex items-center justify-between">
+          <h4 class="text-xs font-bold text-slate-200">📋 Sugerencias de Mejora Recomendadas por IA</h4>
+          <span id="kaizen-proposals-count-badge" class="text-[10px] font-mono text-amber-400 font-bold">0 propuestas generadas</span>
+        </div>
+
+        <div class="overflow-x-auto rounded-xl border border-slate-800 max-h-64 overflow-y-auto bg-slate-950/40">
+          <table class="w-full text-left">
+            <thead class="bg-slate-950 text-slate-400 text-[10px] uppercase font-semibold border-b border-slate-800">
+              <tr>
+                <th class="px-3 py-2">Estación</th>
+                <th class="px-3 py-2">Desperdicio (MUDA)</th>
+                <th class="px-3 py-2">Propuesta IA Generada</th>
+                <th class="px-3 py-2">Ahorro Est.</th>
+                <th class="px-3 py-2 text-right">Acción / Tracker</th>
+              </tr>
+            </thead>
+            <tbody id="kaizen-proposals-tbody" class="text-xs"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="flex justify-end pt-2 border-t border-slate-800">
+        <button onclick="app.closeModal('kaizen-proposals-modal')" class="px-4 py-1.5 text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 rounded-lg">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ACTION TRACKER (TÉCNICOS) -->
+  <div id="action-tracker-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
+    <div class="bg-slate-900 border border-emerald-500/50 rounded-2xl max-w-3xl w-full p-6 shadow-[0_0_30px_rgba(16,185,129,0.2)] space-y-4 my-8">
+      
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center space-x-2">
+          <div class="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/50 flex items-center justify-center text-emerald-400 text-lg">
+            📋
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-white">Action Tracker (Seguimiento de Técnicos)</h3>
+            <p class="text-xs text-slate-400">Compromisos, acciones correctoras y fechas límite por responsable</p>
+          </div>
+        </div>
+        <button onclick="app.closeModal('action-tracker-modal')" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+
+      <!-- Formulario para Agregar Nueva Acción Técnica -->
+      <div class="p-4 bg-slate-950/70 rounded-xl border border-slate-800 space-y-3">
+        <h4 class="text-xs font-bold text-emerald-400"> + Asignar Nueva Acción Técnica</h4>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-[10px] font-semibold text-slate-400 mb-1">Responsable Técnico / Ingeniero</label>
+            <input type="text" id="tracker-tech-input" placeholder="Ej: Ing. Ricardo Silva" class="w-full bg-slate-900 border border-slate-700 text-xs text-white rounded-lg px-2.5 py-1.5 outline-none focus:border-emerald-500">
+          </div>
+          <div>
+            <label class="block text-[10px] font-semibold text-slate-400 mb-1">Estación Asignada</label>
+            <select id="tracker-station-select" class="w-full bg-slate-900 border border-slate-700 text-xs text-white rounded-lg px-2.5 py-1.5 outline-none"></select>
+          </div>
+          <div>
+            <label class="block text-[10px] font-semibold text-slate-400 mb-1">Fecha Límite Compromiso</label>
+            <input type="date" id="tracker-date-input" class="w-full bg-slate-900 border border-slate-700 text-xs text-white rounded-lg px-2.5 py-1.5 outline-none">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-[10px] font-semibold text-slate-400 mb-1">Tarea / Acción Correctora</label>
+          <input type="text" id="tracker-action-text" placeholder="Ej: Ajustar torque neumático y colocar plantilla de ensamble..." class="w-full bg-slate-900 border border-slate-700 text-xs text-white rounded-lg px-2.5 py-1.5 outline-none focus:border-emerald-500">
+        </div>
+
+        <div class="flex justify-end pt-1">
+          <button onclick="app.addActionTrackerItem()" class="px-4 py-1.5 text-xs font-bold bg-gradient-to-r from-cyan-600 to-emerald-600 text-white rounded-lg shadow-md hover:from-cyan-500 hover:to-emerald-500 transition-all">
+            + Asignar Compromiso
+          </button>
+        </div>
+      </div>
+
+      <!-- Tabla de Seguimiento de Acciones Correctoras -->
+      <div class="space-y-2">
+        <h4 class="text-xs font-bold text-slate-200">📋 Plan de Acción & Estado de Cumplimiento</h4>
+        <div class="overflow-x-auto rounded-xl border border-slate-800 max-h-60 overflow-y-auto">
+          <table class="w-full text-left">
+            <thead class="bg-slate-950 text-slate-400 text-[10px] uppercase font-semibold">
+              <tr>
+                <th class="px-3 py-2">Técnico Responsable</th>
+                <th class="px-3 py-2">Estación</th>
+                <th class="px-3 py-2">Acción Correctora</th>
+                <th class="px-3 py-2">Fecha Límite</th>
+                <th class="px-3 py-2">Estado</th>
+                <th class="px-3 py-2 text-right">✕</th>
+              </tr>
+            </thead>
+            <tbody id="action-tracker-tbody" class="text-xs"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="flex justify-end pt-2 border-t border-slate-800">
+        <button onclick="app.closeModal('action-tracker-modal')" class="px-4 py-1.5 text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 rounded-lg">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE PROGRESO DE ANÁLISIS AUTOMÁTICO IA -->
+  <div id="ai-analysis-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+      <div class="flex items-center space-x-3 border-b border-slate-800 pb-3">
+        <div class="w-10 h-10 rounded-xl bg-indigo-600/30 border border-indigo-500/50 flex items-center justify-center animate-pulse">
+          <span class="text-xl">🤖</span>
+        </div>
+        <div>
+          <h3 class="text-sm font-bold text-white">Análisis Automático de Video & Detección de IA</h3>
+          <p class="text-xs text-slate-400">Motor de Visión Computacional & Micro-tiempos Lean</p>
+        </div>
+      </div>
+
+      <div class="space-y-3">
+        <div class="flex items-center justify-between text-xs font-semibold">
+          <span id="ai-status-text" class="text-indigo-300">🔍 Escaneando video y analizando movimiento...</span>
+          <span id="ai-progress-percent" class="font-mono text-white font-extrabold">0%</span>
+        </div>
+
+        <div class="w-full bg-slate-800 rounded-full h-3 overflow-hidden p-0.5 border border-slate-700 shadow-inner">
+          <div id="ai-progress-bar" class="bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-400 h-full rounded-full transition-all duration-200" style="width: 0%;"></div>
+        </div>
+
+        <div id="ai-detected-tasks-list" class="bg-slate-950/60 rounded-xl p-3 border border-slate-800 max-h-36 overflow-y-auto space-y-1.5 font-mono text-[10px]">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODALES DE EDICIÓN Y CREACIÓN DE TAREAS Y ESTACIONES -->
+  <div id="task-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 id="task-modal-title" class="text-sm font-bold text-slate-100">Agregar / Editar Tarea</h3>
+        <button onclick="app.closeModal('task-modal')" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Nombre de la Tarea</label>
+          <input type="text" id="task-modal-name" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-indigo-500" placeholder="Ej: Montar Placa Madre Philo">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1">Duración (segundos)</label>
+            <input type="number" id="task-modal-duration" min="1" step="0.5" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-indigo-500" value="30">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1">Categoría Lean</label>
+            <select id="task-modal-category" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-indigo-500">
+              <option value="VA">🟩 Valor Agregado (VA)</option>
+              <option value="NVA">🟨 Sin Valor Agregado (NVA)</option>
+              <option value="Muda">🟥 Desperdicio (Muda)</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Estación de Trabajo / Operador</label>
+          <select id="task-modal-station" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-indigo-500"></select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Notas / Observaciones</label>
+          <textarea id="task-modal-notes" rows="2" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-indigo-500" placeholder="Especificaciones de torque o calidad..."></textarea>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end space-x-2 pt-2 border-t border-slate-800">
+        <button onclick="app.closeModal('task-modal')" class="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white">Cancelar</button>
+        <button onclick="app.saveTaskModal()" class="px-4 py-2 text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg shadow-md">Guardar Tarea</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Crear / Editar Estación -->
+  <div id="station-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 id="station-modal-title" class="text-sm font-bold text-slate-100">Agregar / Editar Estación</h3>
+        <button onclick="app.closeModal('station-modal')" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Nombre de la Estación</label>
+          <input type="text" id="station-modal-name" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-indigo-500" placeholder="Ej: ST-06: Packaging">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Nombre del Operador</label>
+          <input type="text" id="station-modal-operator" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-indigo-500" placeholder="Ej: Juan Pérez">
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end space-x-2 pt-2 border-t border-slate-800">
+        <button onclick="app.closeModal('station-modal')" class="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white">Cancelar</button>
+        <button onclick="app.saveStationModal()" class="px-4 py-2 text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg shadow-md">Guardar Estación</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Configuración y Calculadora de Tiempo Takt -->
+  <div id="takt-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-sm font-bold text-slate-100 flex items-center space-x-2">
+          <span>⏱️ Configurar Tiempo Takt Objetivo</span>
+        </h3>
+        <button onclick="app.closeModal('takt-modal')" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Tiempo Takt Directo (segundos)</label>
+          <input type="number" id="takt-modal-value" min="1" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm font-bold text-rose-400 outline-none focus:border-indigo-500" value="180">
+        </div>
+
+        <div class="p-3 bg-slate-800/60 border border-slate-700/80 rounded-xl space-y-2">
+          <span class="text-[11px] font-bold text-indigo-300 uppercase tracking-wider block">Calculadora de Tiempo Takt</span>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div>
+              <label class="block text-[10px] text-slate-400 mb-0.5">Tiempo Operativo (min/turno)</label>
+              <input type="number" id="takt-calc-time" placeholder="480" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-white text-xs">
+            </div>
+            <div>
+              <label class="block text-[10px] text-slate-400 mb-0.5">Demanda Cliente (unidades)</label>
+              <input type="number" id="takt-calc-demand" placeholder="160" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-white text-xs">
+            </div>
+          </div>
+          <button onclick="app.calculateTaktFromDemand()" class="w-full py-1 text-[11px] font-semibold bg-slate-700 hover:bg-slate-600 text-indigo-200 rounded transition-all">
+            Calcular = (Tiempo x 60) / Demanda
+          </button>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end space-x-2 pt-2 border-t border-slate-800">
+        <button onclick="app.closeModal('takt-modal')" class="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white">Cancelar</button>
+        <button onclick="app.saveTaktModal()" class="px-4 py-2 text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white rounded-lg shadow-md">Aplicar Takt Time</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Importar Datos -->
+  <div id="import-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-sm font-bold text-slate-100">Importar Configuración de Línea</h3>
+        <button onclick="app.closeModal('import-modal')" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Seleccionar archivo JSON o CSV</label>
+          <input type="file" id="import-file-input" accept=".json,.csv" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-300">
+        </div>
+
+        <div class="relative flex py-1 items-center">
+          <div class="flex-grow border-t border-slate-800"></div>
+          <span class="flex-shrink mx-2 text-[10px] text-slate-500 uppercase">o pegar contenido</span>
+          <div class="flex-grow border-t border-slate-800"></div>
+        </div>
+
+        <div>
+          <textarea id="import-text-input" rows="4" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white font-mono outline-none" placeholder="Pega el contenido JSON o CSV aquí..."></textarea>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end space-x-2 pt-2 border-t border-slate-800">
+        <button onclick="app.closeModal('import-modal')" class="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white">Cancelar</button>
+        <button onclick="app.processImport()" class="px-4 py-2 text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg shadow-md">Importar Datos</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript Modules -->
+  <script src="js/philo-data.js"></script>
+  <script src="js/presets.js"></script>
+  <script src="js/metrics.js"></script>
+  <script src="js/data-store.js"></script>
+  <script src="js/drag-drop.js"></script>
+  <script src="js/yamazumi-chart.js"></script>
+  <script src="js/webcam-analyzer.js"></script>
+  <script src="js/lowband-video.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
