@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Yamazumi Studio & AI Video Analytics - Google Philo Server Line</title>
-  <meta name="description" content="Plataforma de análisis Yamazumi con Detección Automática de Tareas, Kaizen Proposals por IA y Action Tracker de Técnicos.">
+  <meta name="description" content="Plataforma de análisis Yamazumi con Tiempo Estándar, Takt Image y Detección por IA.">
   
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -45,7 +45,7 @@
         <div>
           <h1 class="text-sm font-black tracking-tight text-white flex items-center gap-1.5">
             Yamazumi & AI Video Analytics
-            <span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Kaizen Studio</span>
+            <span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Lean Studio</span>
           </h1>
           <p class="text-[10px] text-slate-400">Línea de Ensamblado de Almacenamiento Masivo (Rack 2U)</p>
         </div>
@@ -146,7 +146,7 @@
         </span>
         <div class="mt-1">
           <span id="kpi-work-content" class="text-lg font-black text-indigo-300">0s</span>
-          <p class="text-[8px] text-slate-400">Suma tareas</p>
+          <p class="text-[8px] text-slate-400">T. Estándar total</p>
         </div>
       </div>
 
@@ -183,6 +183,64 @@
         </div>
       </div>
 
+    </section>
+
+    <!-- PANEL DE PARÁMETROS DE INGENIERÍA LEAN (TIEMPO ESTÁNDAR, TAKT IMAGE Y CONTROL DE VIDEO) -->
+    <section class="glass-card p-3 rounded-2xl border border-indigo-500/30 bg-slate-900/60 no-print">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        
+        <div class="flex items-center space-x-2">
+          <span class="text-xs font-black text-indigo-300 flex items-center gap-1">
+            ⚙️ Parámetros Lean & Takt Image:
+          </span>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3 text-xs">
+          <!-- Factor de Nivelación (Rating) -->
+          <div class="flex items-center space-x-1.5 bg-slate-950/70 px-2.5 py-1 rounded-lg border border-slate-700/80">
+            <label for="rating-factor-input" class="text-[10px] font-semibold text-slate-300" title="Factor de Nivelación de Desempeño (Rating Factor)">
+              Factor Nivelación:
+            </label>
+            <input type="number" id="rating-factor-input" value="1.05" step="0.01" min="0.5" max="2.0"
+                   onchange="app.refresh()"
+                   class="w-14 bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-[11px] font-mono text-emerald-400 font-bold outline-none focus:border-indigo-500 text-center">
+          </div>
+
+          <!-- Suplementos / Tolerancias (%) -->
+          <div class="flex items-center space-x-1.5 bg-slate-950/70 px-2.5 py-1 rounded-lg border border-slate-700/80">
+            <label for="allowances-input" class="text-[10px] font-semibold text-slate-300" title="Porcentaje de Suplementos y Tolerancias de Descanso/Fatiga">
+              Suplementos (%):
+            </label>
+            <input type="number" id="allowances-input" value="10" step="1" min="0" max="50"
+                   onchange="app.refresh()"
+                   class="w-12 bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-[11px] font-mono text-amber-300 font-bold outline-none focus:border-indigo-500 text-center">
+          </div>
+
+          <!-- Takt Image Meta Reducida (%) -->
+          <div class="flex items-center space-x-1.5 bg-slate-950/70 px-2.5 py-1 rounded-lg border border-slate-700/80">
+            <label for="takt-image-percent-input" class="text-[10px] font-semibold text-slate-300" title="Porcentaje Objetivo Takt Image (Colchón de Seguridad)">
+              Meta Takt Image (%):
+            </label>
+            <input type="number" id="takt-image-percent-input" value="90" step="1" min="50" max="100"
+                   onchange="app.refresh()"
+                   class="w-12 bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-[11px] font-mono text-teal-300 font-bold outline-none focus:border-indigo-500 text-center">
+          </div>
+
+          <!-- Calidad y Ahorro de Video -->
+          <div class="flex items-center space-x-1.5 bg-slate-950/70 px-2.5 py-1 rounded-lg border border-slate-700/80">
+            <label for="video-quality-select" class="text-[10px] font-semibold text-slate-300">
+              Calidad Video:
+            </label>
+            <select id="video-quality-select" onchange="LowbandVideoPlayer.setVideoQuality(this.value)"
+                    class="bg-slate-900 border border-slate-700 text-[10px] text-white rounded px-2 py-0.5 outline-none font-semibold">
+              <option value="360p" selected>⚡ Baja / Ahorro (360p)</option>
+              <option value="480p">📺 Media (480p)</option>
+              <option value="original">📽️ Original (HD)</option>
+            </select>
+          </div>
+        </div>
+
+      </div>
     </section>
 
     <!-- Navegación de Pestañas Principales + Botones de Acción Kaizen & Action Tracker (Alineados a la Derecha) -->
@@ -231,7 +289,7 @@
       <div class="w-full lg:w-[68%] min-w-0 flex flex-col space-y-2">
         <div class="flex items-center justify-between">
           <h2 class="text-xs font-bold text-slate-200 flex items-center space-x-2">
-            <span>📊 Balanceo de Línea Philo (Gráfico Yamazumi - Columnas Compactas max-w-[160px])</span>
+            <span>📊 Balanceo de Línea Philo (Gráfico Yamazumi - Tiempo Estándar & Takt Image)</span>
           </h2>
           <span class="text-[10px] text-slate-400">💡 haz clic en cualquier tarea para saltar a su timestamp en el video</span>
         </div>
@@ -418,9 +476,9 @@
               <th class="px-4 py-3">Estación Philo</th>
               <th class="px-4 py-3">Operador</th>
               <th class="px-4 py-3">Nombre de Tarea</th>
-              <th class="px-4 py-3">Duración</th>
+              <th class="px-4 py-3">T. Normal</th>
+              <th class="px-4 py-3">T. Estándar</th>
               <th class="px-4 py-3">Categoría Lean</th>
-              <th class="px-4 py-3">Notas / Poka-Yoke</th>
               <th class="px-4 py-3 text-right">Acciones</th>
             </tr>
           </thead>
@@ -621,7 +679,7 @@
 
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-semibold text-slate-400 mb-1">Duración (segundos)</label>
+            <label class="block text-xs font-semibold text-slate-400 mb-1">Duración Normal (segundos)</label>
             <input type="number" id="task-modal-duration" min="1" step="0.5" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-indigo-500" value="30">
           </div>
           <div>
@@ -683,7 +741,7 @@
     <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
         <h3 class="text-sm font-bold text-slate-100 flex items-center space-x-2">
-          <span>⏱️ Configurar Tiempo Takt Objetivo</span>
+          <span>⏱️ Configurar Tiempo Takt Objetivo & Takt Image</span>
         </h3>
         <button onclick="app.closeModal('takt-modal')" class="text-slate-400 hover:text-white">✕</button>
       </div>
