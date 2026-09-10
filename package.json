@@ -1,0 +1,30 @@
+{
+  "name": "yamazumi-studio-app",
+  "version": "1.2.0",
+  "description": "Herramienta Digital de Balanceo de Líneas Lean Manufacturing con Gráfico Yamazumi, Tiempo Estándar, Takt Image y AI Video Analytics",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve . -p 3000",
+    "deploy": "gh-pages -d . --ignore 'node_modules'",
+    "test": "echo \"Error: no test specified\" && exit 0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/username/yamazumi-studio-app.git"
+  },
+  "keywords": [
+    "yamazumi",
+    "lean-manufacturing",
+    "takt-time",
+    "line-balancing",
+    "video-analytics",
+    "tablet-touch",
+    "kaizen"
+  ],
+  "author": "Lean Engineering Team",
+  "license": "MIT",
+  "devDependencies": {
+    "gh-pages": "^6.1.1",
+    "serve": "^14.2.3"
+  }
+}

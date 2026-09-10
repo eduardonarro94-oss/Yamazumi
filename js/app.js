@@ -1,11 +1,14 @@
 /**
  * Aplicación SPA Principal (Yamazumi Studio & Video Analytics)
- * Controlador global para gestión de estado, renderizado de gráficos, IA Kaizen Engine y Action Tracker
+ * Controlador global para gestión de estado, renderizado de gráficos, Tiempo Estándar, Takt Image y Video Optimization
  */
 const app = {
   state: {
     preset: 'google_philo',
     taktTime: 180,
+    ratingFactor: 1.05,
+    allowances: 0.10,
+    taktImagePercent: 0.90,
     stations: [],
     currentTab: 'dashboard',
     kaizenProposals: [],
@@ -16,9 +19,10 @@ const app = {
   editingStationId: null,
 
   init() {
-    console.log("Inicializando Yamazumi Studio App con conjunto de datos exacto INITIAL_STATIONS...");
+    console.log("Inicializando Yamazumi Studio App con Tiempo Estándar, Takt Image y Límite de Video...");
     this.loadInitialData();
     this.bindEvents();
+    DragDropEngine.init((moveData) => this.moveTaskBetweenStations(moveData.taskId, moveData.sourceStationId, moveData.targetStationId, moveData.targetIndex));
     this.refresh();
   },
 
@@ -30,7 +34,6 @@ const app = {
 
     this.state.kaizenProposals = DataStore.loadKaizenProposals() || [];
     
-    // Si no hay propuestas previas, generar automáticamente con IA al inicio
     if (this.state.kaizenProposals.length === 0) {
       this.generateAiKaizenProposalsSilently();
     }
@@ -65,7 +68,7 @@ const app = {
 
   bindEvents() {
     window.addEventListener('resize', () => {
-      YamazumiChart.render(this.state.stations, this.state.taktTime);
+      this.refresh();
     });
   },
 
@@ -86,25 +89,41 @@ const app = {
       }
     });
 
-    if (tabName === 'dashboard') {
-      YamazumiChart.render(this.state.stations, this.state.taktTime);
-    } else if (tabName === 'table') {
-      this.renderTableView();
-    } else if (tabName === 'analytics') {
-      this.renderAnalyticsView();
-    }
+    this.refresh();
+  },
+
+  updateLeanParametersFromUI() {
+    const rfInput = document.getElementById('rating-factor-input');
+    const alInput = document.getElementById('allowances-input');
+    const tiInput = document.getElementById('takt-image-percent-input');
+
+    if (rfInput) this.state.ratingFactor = parseFloat(rfInput.value) || 1.05;
+    if (alInput) this.state.allowances = (parseFloat(alInput.value) || 10) / 100;
+    if (tiInput) this.state.taktImagePercent = (parseFloat(tiInput.value) || 90) / 100;
   },
 
   refresh() {
+    this.updateLeanParametersFromUI();
     DataStore.saveState(this.state);
     DataStore.saveKaizenProposals(this.state.kaizenProposals);
     DataStore.saveActionTracker(this.state.actionTracker);
 
-    const metrics = MetricsEngine.calculateMetrics(this.state.stations, this.state.taktTime);
+    const metricsOptions = {
+      ratingFactor: this.state.ratingFactor,
+      allowances: this.state.allowances,
+      taktImagePercent: this.state.taktImagePercent
+    };
+
+    const metrics = MetricsEngine.calculateMetrics(this.state.stations, this.state.taktTime, metricsOptions);
     this.updateKPIs(metrics);
 
     if (this.state.currentTab === 'dashboard') {
-      YamazumiChart.render(this.state.stations, this.state.taktTime);
+      YamazumiChart.render(this.state.stations, {
+        taktTime: this.state.taktTime,
+        ratingFactor: this.state.ratingFactor,
+        allowances: this.state.allowances,
+        taktImagePercent: this.state.taktImagePercent
+      });
     } else if (this.state.currentTab === 'table') {
       this.renderTableView();
     } else if (this.state.currentTab === 'analytics') {
@@ -159,7 +178,7 @@ const app = {
   },
 
   // -------------------------------------------------------------
-  // GESTIÓN DE ESTACIONES (EDITAR, ELIMINAR, CREAR)
+  // GESTIÓN DE ESTACIONES
   // -------------------------------------------------------------
   openStationModal(stationId = null) {
     const modalTitle = document.getElementById('station-modal-title');
@@ -246,8 +265,29 @@ const app = {
     }
   },
 
+  moveTaskBetweenStations(taskId, sourceStationId, targetStationId, targetIndex = -1) {
+    if (!taskId || !sourceStationId || !targetStationId) return;
+
+    const sourceSt = this.state.stations.find(s => s.id === sourceStationId);
+    const targetSt = this.state.stations.find(s => s.id === targetStationId);
+    if (!sourceSt || !targetSt) return;
+
+    const taskIndex = sourceSt.tasks.findIndex(t => t.id === Number(taskId) || t.id === taskId);
+    if (taskIndex === -1) return;
+
+    const [movedTask] = sourceSt.tasks.splice(taskIndex, 1);
+
+    if (targetIndex >= 0 && targetIndex < targetSt.tasks.length) {
+      targetSt.tasks.splice(targetIndex, 0, movedTask);
+    } else {
+      targetSt.tasks.push(movedTask);
+    }
+
+    this.refresh();
+  },
+
   // -------------------------------------------------------------
-  // GESTIÓN DE TAREAS (CREAR, EDITAR, ELIMINAR)
+  // GESTIÓN DE TAREAS
   // -------------------------------------------------------------
   openTaskModal(task = null, stationId = null) {
     const nameInput = document.getElementById('task-modal-name');
@@ -340,7 +380,7 @@ const app = {
   },
 
   // -------------------------------------------------------------
-  // MOTOR DE RECOMENDACIONES KAIZEN POR IA (AUTOMÁTICO)
+  // MOTOR DE RECOMENDACIONES KAIZEN POR IA
   // -------------------------------------------------------------
   openKaizenProposalsModal() {
     const modal = document.getElementById('kaizen-proposals-modal');
@@ -673,6 +713,9 @@ const app = {
   exportJSON() {
     DataStore.exportJSON({
       taktTime: this.state.taktTime,
+      ratingFactor: this.state.ratingFactor,
+      allowances: this.state.allowances,
+      taktImagePercent: this.state.taktImagePercent,
       stations: this.state.stations,
       kaizenProposals: this.state.kaizenProposals,
       actionTracker: this.state.actionTracker
@@ -702,15 +745,17 @@ const app = {
         else if (cat === 'NVA') catBadge = '<span class="px-2 py-0.5 rounded text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">🟨 NVA</span>';
         else catBadge = '<span class="px-2 py-0.5 rounded text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40">🟥 Muda</span>';
 
+        const stdDur = task.stdDuration || Math.round(task.duration * (this.state.ratingFactor || 1.05) * (1 + (this.state.allowances || 0.10)) * 10) / 10;
+
         html += `
           <tr class="border-b border-slate-800 hover:bg-slate-800/40 text-xs">
             <td class="px-4 py-2.5 font-mono text-slate-500">${index++}</td>
             <td class="px-4 py-2.5 font-bold text-slate-200">${st.name}</td>
             <td class="px-4 py-2.5 text-slate-400">${st.operator || 'N/A'}</td>
             <td class="px-4 py-2.5 text-white font-medium">${task.name}</td>
-            <td class="px-4 py-2.5 font-bold text-indigo-300">${task.duration}s</td>
+            <td class="px-4 py-2.5 font-mono text-slate-400">${task.duration}s</td>
+            <td class="px-4 py-2.5 font-bold text-emerald-400 font-mono">${stdDur}s</td>
             <td class="px-4 py-2.5">${catBadge}</td>
-            <td class="px-4 py-2.5 text-slate-400 truncate max-w-[180px]">${task.notes || '-'}</td>
             <td class="px-4 py-2.5 text-right space-x-2">
               <button onclick="app.openTaskModal(app.getTaskById('${task.id}'), '${st.id}')" class="text-indigo-400 hover:text-indigo-300 font-bold">Editar</button>
               <button onclick="app.deleteTask('${task.id}', '${st.id}')" class="text-rose-400 hover:text-rose-300 font-bold">Eliminar</button>
@@ -735,34 +780,46 @@ const app = {
     const container = document.getElementById('analytics-view-container');
     if (!container) return;
 
-    const metrics = MetricsEngine.calculateMetrics(this.state.stations, this.state.taktTime);
+    const metricsOptions = {
+      ratingFactor: this.state.ratingFactor,
+      allowances: this.state.allowances,
+      taktImagePercent: this.state.taktImagePercent
+    };
+
+    const metrics = MetricsEngine.calculateMetrics(this.state.stations, this.state.taktTime, metricsOptions);
 
     container.innerHTML = `
       <div class="glass-card rounded-2xl p-6 space-y-6">
         <h2 class="text-base font-bold text-white border-b border-slate-800 pb-3 flex items-center justify-between">
-          <span>📈 Reporte de Desperdicios y Oportunidades Kaizen</span>
+          <span>📈 Reporte de Desperdicios y Oportunidades Kaizen (T. Estándar & Takt Image)</span>
           <button onclick="app.resetDefaultData()" class="px-3 py-1 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-slate-700 rounded-lg">
             🔄 Restablecer Datos INITIAL_STATIONS
           </button>
         </h2>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div class="p-4 bg-slate-900/80 border border-slate-800 rounded-xl space-y-1">
             <span class="text-xs font-semibold text-slate-400">Desperdicio Total (Muda)</span>
             <div class="text-2xl font-black text-rose-400">${metrics.totalMuda}s</div>
-            <p class="text-xs text-slate-400">${metrics.mudaPercent.toFixed(1)}% del tiempo total de ensamble</p>
+            <p class="text-xs text-slate-400">${metrics.mudaPercent.toFixed(1)}% del tiempo estándar total</p>
           </div>
 
           <div class="p-4 bg-slate-900/80 border border-slate-800 rounded-xl space-y-1">
             <span class="text-xs font-semibold text-slate-400">Estación Cuello de Botella</span>
             <div class="text-lg font-black text-amber-300 truncate">${metrics.bottleneckStation ? metrics.bottleneckStation.name : 'N/A'}</div>
-            <p class="text-xs text-slate-400">Tiempo de ciclo: ${metrics.bottleneckStation ? metrics.bottleneckStation.totalTime : 0}s (Meta Takt: ${metrics.taktTime}s)</p>
+            <p class="text-xs text-slate-400">Ciclo Estándar: ${metrics.bottleneckStation ? metrics.bottleneckStation.totalTime : 0}s (Meta Takt: ${metrics.taktTime}s)</p>
           </div>
 
           <div class="p-4 bg-slate-900/80 border border-slate-800 rounded-xl space-y-1">
-            <span class="text-xs font-semibold text-slate-400">Potencial de Incremento de Producción</span>
-            <div class="text-2xl font-black text-emerald-400">+${Math.round((metrics.totalMuda / metrics.totalWorkContent) * 100)}%</div>
-            <p class="text-xs text-slate-400">Al eliminar tareas de Desperdicio identificadas</p>
+            <span class="text-xs font-semibold text-slate-400">Meta Takt Image (Colchón)</span>
+            <div class="text-2xl font-black text-emerald-400">${metrics.taktImage}s</div>
+            <p class="text-xs text-slate-400">${metrics.taktImagePercent * 100}% del Takt Time oficial (${metrics.taktTime}s)</p>
+          </div>
+
+          <div class="p-4 bg-slate-900/80 border border-slate-800 rounded-xl space-y-1">
+            <span class="text-xs font-semibold text-slate-400">Parámetros de Trabajo</span>
+            <div class="text-lg font-black text-indigo-300">R: ${(metrics.ratingFactor).toFixed(2)} | A: ${Math.round(metrics.allowances * 100)}%</div>
+            <p class="text-xs text-slate-400">Factor Nivelación & Suplementos</p>
           </div>
         </div>
       </div>

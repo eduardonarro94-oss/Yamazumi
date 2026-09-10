@@ -1,5 +1,6 @@
 /**
  * Módulo de Video Analytics con Análisis Automático de Video e Inteligencia Artificial
+ * Incluye límite de 30 minutos (1800s) y selector de calidad de bajo consumo (360p, 480p, Original)
  */
 const LowbandVideoPlayer = {
   activeStationId: null,
@@ -10,9 +11,10 @@ const LowbandVideoPlayer = {
   currentTimeMs: 0,
   findings: [],
   activeLoopInterval: null,
+  maxDurationSec: 1800, // Límite máximo 30 minutos
 
   init(initialFindings = []) {
-    console.log("Inicializando LowbandVideoPlayer con Detección Automática por IA...");
+    console.log("Inicializando LowbandVideoPlayer con Detección Automática por IA y Límite de 30 Minutos...");
     this.findings = [...initialFindings];
     this.videoEl = document.getElementById('lowband-video-element');
     this.bindEvents();
@@ -22,7 +24,18 @@ const LowbandVideoPlayer = {
   bindEvents() {
     if (!this.videoEl) return;
 
+    this.videoEl.addEventListener('loadedmetadata', () => {
+      if (this.videoEl.duration > this.maxDurationSec) {
+        alert(`⚠️ ADVERTENCIA DE DURACIÓN: El video cargado (${Math.round(this.videoEl.duration / 60)} min) supera el límite máximo recomendado de 30 minutos (1800s). Se reproducirá recortado en modo de ahorro de recursos.`);
+      }
+    });
+
     this.videoEl.addEventListener('timeupdate', () => {
+      if (this.videoEl.currentTime > this.maxDurationSec) {
+        this.videoEl.pause();
+        this.videoEl.currentTime = this.maxDurationSec;
+        alert("⏱️ Límite máximo de 30 minutos alcanzado para la sesión de análisis de video.");
+      }
       this.updateClock();
     });
 
@@ -47,7 +60,7 @@ const LowbandVideoPlayer = {
   },
 
   /**
-   * Carga permisiva de video y dispara el escaneo y análisis automático de tareas
+   * Carga permisiva de video con control de duración máxima (30 min)
    */
   handleLocalVideoUpload(file) {
     if (!file) return;
@@ -69,8 +82,21 @@ const LowbandVideoPlayer = {
       fileNameEl.innerText = `${file.name} (${(file.size / (1024 * 1024)).toFixed(1)} MB)`;
     }
 
-    // Iniciar escaneo y análisis automático de tareas del video
     this.runAiVideoAnalysis(file);
+  },
+
+  setVideoQuality(qualityKey) {
+    console.log(`Cambiando modo de calidad de video a: ${qualityKey}`);
+    const statusBadge = document.getElementById('video-status-badge');
+    if (statusBadge) {
+      if (qualityKey === '360p') {
+        statusBadge.innerText = "⚡ Modo Ahorro (360p)";
+      } else if (qualityKey === '480p') {
+        statusBadge.innerText = "📺 Modo Medio (480p)";
+      } else {
+        statusBadge.innerText = "📽️ Calidad Original";
+      }
+    }
   },
 
   /**
@@ -97,7 +123,7 @@ const LowbandVideoPlayer = {
       if (progressPercent) progressPercent.innerText = `${progress}%`;
 
       if (progress === 20 && statusText) {
-        statusText.innerText = "🔍 Decodificando fotogramas & estimando densidad de movimiento...";
+        statusText.innerText = "🔍 Decodificando fotogramas a baja resolución (360p)...";
       } else if (progress === 50 && statusText) {
         statusText.innerText = "⚡ Identificando patrones de trabajo y micro-segmentos...";
         if (detectedList) {
@@ -111,7 +137,7 @@ const LowbandVideoPlayer = {
         }
       } else if (progress >= 100) {
         clearInterval(interval);
-        if (statusText) statusText.innerText = "✅ Análisis completado. Generando gráfico Yamazumi y KPIs...";
+        if (statusText) statusText.innerText = "✅ Análisis completado. Generando gráfico Yamazumi e indicadores...";
 
         setTimeout(() => {
           this.finalizeAiAnalysis(file);
@@ -121,14 +147,14 @@ const LowbandVideoPlayer = {
     }, 100);
   },
 
-  /**
-   * Finaliza el análisis automático: crea las tareas divididas por timestamps y actualiza Yamazumi y KPIs
-   */
   finalizeAiAnalysis(file) {
-    const videoDuration = this.videoEl && this.videoEl.duration ? Math.round(this.videoEl.duration) : 120;
+    let videoDuration = this.videoEl && this.videoEl.duration ? Math.round(this.videoEl.duration) : 120;
+    if (videoDuration > this.maxDurationSec) {
+      videoDuration = this.maxDurationSec;
+    }
+
     const currentSt = app.state.stations.find(s => s.id === this.activeStationId) || app.state.stations[0];
 
-    // Reemplazar tareas de la estación activa con las tareas detectadas automáticamente
     const segmentDuration = Math.max(Math.floor(videoDuration / 4), 15);
 
     const generatedTasks = [
@@ -172,18 +198,12 @@ const LowbandVideoPlayer = {
 
     currentSt.tasks = generatedTasks;
 
-    // Refrescar el estado de Yamazumi y KPIs en tiempo real
     app.refresh();
-
-    // Iniciar reproducción de la primera tarea detectada
     this.seekToTask(generatedTasks[0], currentSt);
 
-    alert(`¡Análisis IA Completado! Se han detectado ${generatedTasks.length} tareas automáticamente en '${currentSt.name}'. El gráfico Yamazumi, el Cuello de Botella y los KPIs se han actualizado.`);
+    alert(`¡Análisis IA Completado! Se han detectado ${generatedTasks.length} tareas automáticamente en '${currentSt.name}'. El gráfico Yamazumi y los indicadores se han actualizado.`);
   },
 
-  /**
-   * Salta al timestamp y reproduce el segmento en bucle continuo (videoStart a videoEnd)
-   */
   seekToTask(task, station) {
     if (!task) return;
     this.activeTaskId = task.id;
@@ -193,7 +213,7 @@ const LowbandVideoPlayer = {
     }
 
     const startTime = task.videoStart || 0;
-    const endTime = task.videoEnd || (startTime + task.duration);
+    const endTime = Math.min(task.videoEnd || (startTime + task.duration), this.maxDurationSec);
 
     if (this.videoEl) {
       if (this.activeLoopInterval) {
@@ -203,7 +223,6 @@ const LowbandVideoPlayer = {
       this.videoEl.currentTime = startTime;
       this.videoEl.play().catch(() => {});
 
-      // Control del bucle por intervalo de segmento
       this.activeLoopInterval = setInterval(() => {
         if (this.videoEl && this.videoEl.currentTime >= endTime) {
           this.videoEl.currentTime = startTime;
@@ -240,7 +259,7 @@ const LowbandVideoPlayer = {
 
   seekToTimestamp(seconds) {
     if (this.videoEl) {
-      this.videoEl.currentTime = seconds;
+      this.videoEl.currentTime = Math.min(seconds, this.maxDurationSec);
       this.videoEl.play().catch(() => {});
       this.updateClock();
     }
@@ -270,7 +289,7 @@ const LowbandVideoPlayer = {
   stepFrame(deltaSeconds) {
     if (this.videoEl) {
       this.videoEl.pause();
-      this.videoEl.currentTime = Math.max(0, this.videoEl.currentTime + deltaSeconds);
+      this.videoEl.currentTime = Math.max(0, Math.min(this.maxDurationSec, this.videoEl.currentTime + deltaSeconds));
       this.updateClock();
     }
   },

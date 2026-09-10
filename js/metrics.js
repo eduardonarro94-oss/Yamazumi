@@ -1,11 +1,16 @@
 /**
  * Módulo de Cálculo de Métricas Lean Manufacturing para el Gráfico Yamazumi
- * Soporta categorización por t.category o t.type ('VA', 'NVA', 'MUDA')
+ * Incluye Cálculo de Tiempo Estándar (Factor de Nivelación * Suplementos) y Takt Image
  */
 const MetricsEngine = {
   calculateMetrics(stations = [], taktTime = 180, options = {}) {
     taktTime = Number(taktTime) || 180;
+    const ratingFactor = Number(options.ratingFactor) || 1.05;
+    const allowances = Number(options.allowances) || 0.10;
+    const taktImagePercent = Number(options.taktImagePercent) || 0.90;
     const kaizenMode = !!options.kaizenMode;
+
+    const taktImage = Math.round(taktTime * taktImagePercent);
     
     let totalWorkContent = 0;
     let totalVA = 0;
@@ -21,18 +26,27 @@ const MetricsEngine = {
 
       if (st.tasks) {
         st.tasks.forEach(t => {
-          const dur = Number(t.duration) || 0;
+          const durNormal = Number(t.duration) || 0;
+          // Tiempo Estándar = Tiempo Normal * Factor Nivelación * (1 + Suplementos)
+          const stdDur = Math.round(durNormal * ratingFactor * (1 + allowances) * 10) / 10;
+          t.stdDuration = stdDur; // Guardar valor calculado para renderizado
+
           const cat = (t.category || t.type || 'VA').toUpperCase();
-          if (cat === 'VA') stVA += dur;
-          else if (cat === 'NVA') stNVA += dur;
-          else if (cat === 'MUDA' || cat === 'WASTE') stMuda += dur;
-          else stVA += dur;
+          if (cat === 'VA') stVA += stdDur;
+          else if (cat === 'NVA') stNVA += stdDur;
+          else if (cat === 'MUDA' || cat === 'WASTE') stMuda += stdDur;
+          else stVA += stdDur;
         });
       }
 
-      const totalTime = stVA + stNVA + (kaizenMode ? 0 : stMuda);
+      stVA = Math.round(stVA * 10) / 10;
+      stNVA = Math.round(stNVA * 10) / 10;
+      stMuda = Math.round(stMuda * 10) / 10;
+
+      const totalTime = Math.round((stVA + stNVA + (kaizenMode ? 0 : stMuda)) * 10) / 10;
       const isOverburdened = totalTime > taktTime;
-      const overTaktDelta = isOverburdened ? (totalTime - taktTime) : 0;
+      const isOverTaktImage = totalTime > taktImage;
+      const overTaktDelta = isOverburdened ? Math.round((totalTime - taktTime) * 10) / 10 : 0;
 
       totalWorkContent += totalTime;
       totalVA += stVA;
@@ -50,9 +64,15 @@ const MetricsEngine = {
         muda: stMuda,
         tasksCount,
         isOverburdened,
+        isOverTaktImage,
         overTaktDelta
       };
     });
+
+    totalWorkContent = Math.round(totalWorkContent * 10) / 10;
+    totalVA = Math.round(totalVA * 10) / 10;
+    totalNVA = Math.round(totalNVA * 10) / 10;
+    totalMuda = Math.round(totalMuda * 10) / 10;
 
     const numStations = stations.length;
     const cycleTimes = stationMetrics.map(s => s.totalTime);
@@ -83,6 +103,10 @@ const MetricsEngine = {
 
     return {
       taktTime,
+      taktImage,
+      taktImagePercent,
+      ratingFactor,
+      allowances,
       stationsCount: numStations,
       totalTasksCount,
       totalWorkContent,

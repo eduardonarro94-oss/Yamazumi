@@ -1,6 +1,7 @@
 /**
  * Motor de Renderizado del Gráfico Yamazumi con Integración de Video Analytics Philo
- * Padding superior pt-10 / pt-8 agregado para dar respiro al badge de Cuello de Botella
+ * Renderiza Línea Takt Time (100% Roja Discontinua) y Línea Takt Image (-10% Verde Punteada)
+ * Construye las barras apiladas estrictamente con el Tiempo Estándar resultante
  */
 const YamazumiChart = {
   activeTaskId: null,
@@ -8,13 +9,23 @@ const YamazumiChart = {
   /**
    * Renderiza el gráfico Yamazumi dentro del contenedor especificado
    */
-  render(stations = [], taktTime = 180) {
+  render(stations = [], options = {}) {
     const containerEl = document.getElementById('yamazumi-chart-container');
     if (!containerEl) return;
 
-    taktTime = Number(taktTime) || 180;
-    const metrics = MetricsEngine.calculateMetrics(stations, taktTime);
+    let taktTime = 180;
+    if (typeof options === 'number') {
+      taktTime = options;
+      options = { taktTime };
+    } else {
+      taktTime = Number(options.taktTime) || 180;
+    }
+
+    const metrics = MetricsEngine.calculateMetrics(stations, taktTime, options);
     const maxCycleTime = metrics.maxCycleTime || 0;
+    
+    // Takt Image Fijo al 10% por debajo del Takt Time (Takt Time * 0.90)
+    const taktImage = Math.round(taktTime * 0.90);
 
     const highestValue = Math.max(taktTime, maxCycleTime, 100);
     const maxYScale = Math.ceil((highestValue * 1.25) / 20) * 20;
@@ -22,13 +33,14 @@ const YamazumiChart = {
     const chartHeightPx = 380;
     const pxPerSecond = chartHeightPx / maxYScale;
     const taktTimePxFromBottom = taktTime * pxPerSecond;
+    const taktImagePxFromBottom = taktImage * pxPerSecond;
 
     let html = `
       <div class="relative w-full min-h-[460px] overflow-x-auto pb-4 pt-10 bg-slate-900/40 rounded-2xl border border-slate-700/60 backdrop-blur-md shadow-2xl">
-        <!-- Barra de escala lateral Y & Contenedor Principal del Gráfico con Padding Superior pt-6 -->
+        <!-- Barra de escala lateral Y & Contenedor Principal del Gráfico con Padding Superior pt-8 -->
         <div class="flex items-end min-w-max px-4 pt-8" style="height: ${chartHeightPx + 150}px; min-height: ${chartHeightPx + 150}px;">
           
-          <!-- Eje Y (Escala de Tiempo en Segundos) -->
+          <!-- Eje Y (Escala de Tiempo Estándar en Segundos) -->
           <div class="flex flex-col justify-between pr-2.5 text-[11px] font-semibold text-slate-400 border-r border-slate-700/80 sticky left-0 bg-slate-900/90 z-20 shadow-md select-none" style="height: ${chartHeightPx}px; min-height: ${chartHeightPx}px; bottom: 55px;">
             ${this.renderYAxisTicks(maxYScale, chartHeightPx)}
           </div>
@@ -36,7 +48,7 @@ const YamazumiChart = {
           <!-- Área de Columnas de Estaciones -->
           <div class="relative flex items-end space-x-3 pl-4 flex-1 min-h-[${chartHeightPx}px]" style="min-height: ${chartHeightPx}px;">
             
-            <!-- Línea Horizontal de Takt Time -->
+            <!-- 1. LÍNEA TAKT TIME (100% - ROJO DISCONTINUO / DASHED) -->
             <div class="absolute left-0 right-0 z-10 pointer-events-none transition-all duration-300 group" style="bottom: ${taktTimePxFromBottom + 55}px;">
               <div class="w-full border-b-2 border-dashed border-rose-500/90 shadow-[0_0_12px_rgba(244,63,94,0.4)]"></div>
               
@@ -44,8 +56,19 @@ const YamazumiChart = {
               <div class="absolute left-2 -top-3.5 pointer-events-auto bg-rose-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg flex items-center space-x-1 cursor-pointer hover:bg-rose-500 transition-colors"
                    title="Haz clic para modificar el Tiempo Takt Objetivo"
                    onclick="app.openTaktModal()">
-                <span>⏱️ Takt: ${taktTime}s</span>
+                <span>⏱️ Takt Time (100%): ${taktTime}s</span>
                 <svg class="w-2.5 h-2.5 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+              </div>
+            </div>
+
+            <!-- 2. LÍNEA TAKT IMAGE (-10% / 90% TARGET - VERDE CONTINUO/PUNTEADO) -->
+            <div class="absolute left-0 right-0 z-10 pointer-events-none transition-all duration-300 group" style="bottom: ${taktImagePxFromBottom + 55}px;">
+              <div class="w-full border-b-2 border-dotted border-emerald-400/90 shadow-[0_0_10px_rgba(52,211,153,0.4)]"></div>
+              
+              <!-- Badge de Takt Image (-10% Target) -->
+              <div class="absolute right-4 -top-3.5 pointer-events-auto bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-[10px] font-extrabold px-2.5 py-0.5 rounded-full shadow-lg flex items-center space-x-1 border border-emerald-300"
+                   title="Takt Image (Meta al 90% / 10% por debajo del Takt Time)">
+                <span>🎯 Takt Image (-10% Target): ${taktImage}s</span>
               </div>
             </div>
 
@@ -90,7 +113,7 @@ const YamazumiChart = {
   renderStationColumn(st, index, stMetrics, globalMetrics, pxPerSecond, chartHeightPx, taktTime) {
     const isOverburdened = stMetrics ? stMetrics.isOverburdened : false;
     const isBottleneck = globalMetrics.bottleneckStation && globalMetrics.bottleneckStation.id === st.id && globalMetrics.maxCycleTime > 0;
-    const totalTime = stMetrics ? stMetrics.totalTime : st.tasks.reduce((a, b) => a + (b.duration || 0), 0);
+    const totalTime = stMetrics ? stMetrics.totalTime : st.tasks.reduce((a, b) => a + (b.stdDuration || b.duration || 0), 0);
     const overTaktDelta = stMetrics ? stMetrics.overTaktDelta : 0;
     
     const columnContainerClasses = isBottleneck 
@@ -174,7 +197,8 @@ const YamazumiChart = {
   },
 
   renderTaskBlock(task, index, station, pxPerSecond) {
-    const blockHeightPx = Math.max(Math.round(task.duration * pxPerSecond), 22);
+    const stdDur = task.stdDuration || task.duration || 0;
+    const blockHeightPx = Math.max(Math.round(stdDur * pxPerSecond), 22);
     const isSelected = this.activeTaskId === task.id;
 
     let bgClasses = '';
@@ -200,7 +224,7 @@ const YamazumiChart = {
            data-task-id="${task.id}"
            data-station-id="${station.id}"
            onclick="app.handleTaskClicked('${task.id}', '${station.id}')"
-           title="Clic para saltar al timestamp en video (${task.videoStart || task.timestamp || 0}s): ${task.name}">
+           title="Clic para saltar al timestamp en video (${task.videoStart || task.timestamp || 0}s): ${task.name} (Normal: ${task.duration}s ➔ Estándar: ${stdDur}s)">
         
         <div class="flex items-center space-x-1 overflow-hidden pr-1">
           <span class="text-[9px] text-white/80">▶</span>
@@ -211,7 +235,7 @@ const YamazumiChart = {
             </span>
             ${blockHeightPx > 28 ? `
               <span class="text-[8.5px] opacity-90 font-medium">
-                ${task.duration}s (${categoryBadge})
+                ${stdDur}s (Est.)
               </span>
             ` : ''}
           </div>
